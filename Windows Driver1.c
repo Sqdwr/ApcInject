@@ -282,9 +282,13 @@ VOID Test()
 	KEINITIALIZEAPC KeInitializeApc = NULL;
 	KEINSERTQUEUEAPC KeInsertQueueApc = NULL;
 
+	HANDLE ProcessId = NULL;
+
 	PKAPC Apc = NULL;
-	HANDLE InjectProcessHandle = NULL;
+	HANDLE ProcessHandle = NULL;
 	PKTHREAD InjectThread = NULL;
+	PKPROCESS InjectProcess = NULL;
+	KAPC_STATE ApcState = { 0 };
 
 	PVOID PathBuffer = NULL;
 	PVOID ShellCode = NULL;
@@ -309,9 +313,9 @@ VOID Test()
 			break;
 		}
 
-		LoadLibraryA = GeProcAddressFromProcess((HANDLE)1252, L"Kernel32", "LoadLibraryA");
+		LoadLibraryA = GeProcAddressFromProcess(ProcessId, L"Kernel32", "LoadLibraryA");
 		if (LoadLibraryA == 0)
-			LoadLibraryA = GeProcAddressFromProcess((HANDLE)1252, L"KernelBase", "LoadLibraryA");
+			LoadLibraryA = GeProcAddressFromProcess(ProcessId, L"KernelBase", "LoadLibraryA");
 
 		if (LoadLibraryA == 0)
 		{
@@ -319,7 +323,7 @@ VOID Test()
 			break;
 		}
 
-		InjectThread = FindInjectThread((HANDLE)1252);
+		InjectThread = FindInjectThread(ProcessId);
 		if (InjectThread == NULL)
 		{
 			KdPrint(("√ª’“µΩø…“‘Injectµƒœﬂ≥Ã£°\n"));
@@ -333,15 +337,15 @@ VOID Test()
 			break;
 		}
 
-		InjectProcessHandle = OpenProcess(PsGetProcessId);
-		if (InjectProcessHandle == NULL)
+		ProcessHandle = OpenProcess(ProcessId);
+		if (ProcessHandle == NULL)
 		{
 			KdPrint(("OpenProcess ß∞‹£°\n"));
 			break;
 		}
 
 		PathBufferSize = sizeof(DllPath);
-		Status = ZwAllocateVirtualMemory(InjectProcessHandle, &PathBuffer, 0, (SIZE_T *)&PathBufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+		Status = ZwAllocateVirtualMemory(ProcessHandle, &PathBuffer, 0, (SIZE_T *)&PathBufferSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 		if (!NT_SUCCESS(Status))
 		{
 			KdPrint(("∑÷≈‰ƒ⁄¥Ê ß∞‹£°¥ÌŒÛ¬Î£∫%x\n", Status));
@@ -349,19 +353,38 @@ VOID Test()
 		}
 
 		ShellCodeSize = sizeof(NormalRoutine);
-		Status = ZwAllocateVirtualMemory(InjectProcessHandle, &ShellCode, 0, (SIZE_T *)&ShellCodeSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+		Status = ZwAllocateVirtualMemory(ProcessHandle, &ShellCode, 0, (SIZE_T *)&ShellCodeSize, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
 		if (!NT_SUCCESS(Status))
 		{
 			KdPrint(("∑÷≈‰ƒ⁄¥Ê ß∞‹£°¥ÌŒÛ¬Î£∫%x\n", Status));
 			return;
 		}
 
+		Status = PsLookupProcessByProcessId(ProcessId, &InjectProcess);
+		if (!NT_SUCCESS(Status))
+		{
+			KdPrint(("PsLookupProcessByProcessId ß∞‹£°¥ÌŒÛ¬Î£∫%x£°\n", Status));
+			break;
+		}
 
-		//KeInitializeApc(Apc, InjectThread, OriginalApcEnvironment, KernelRoutine, NULL, , UserMode, NULL);
+		KeStackAttachProcess(InjectProcess, &ApcState);
+
+		RtlZeroMemory(PathBuffer, PathBufferSize);
+		RtlZeroMemory(ShellCode, ShellCodeSize);
+
+		RtlCopyMemory(PathBuffer, DllPath, sizeof(DllPath));
+		RtlCopyMemory(ShellCode, NormalRoutine, sizeof(NormalRoutine));
+
+		KeInitializeApc(Apc, InjectThread, OriginalApcEnvironment, KernelRoutine, NULL, ShellCode, UserMode, NULL);
+		KeInsertQueueApc(Apc, LoadLibraryA, DllPath, IO_NO_INCREMENT);
+
+
+		KeUnstackDetachProcess(&ApcState);
 
 	} while (FALSE);
 
-	
+	sfCloseHandle(ProcessHandle);
+	if (InjectProcess)ObDereferenceObject(InjectProcess);
 }
 
 VOID Unload(PDRIVER_OBJECT DriverObject)

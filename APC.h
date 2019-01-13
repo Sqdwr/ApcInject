@@ -8,6 +8,30 @@ typedef enum _KAPC_ENVIRONMENT {
 	InsertApcEnvironment											//被插入时的环境
 } KAPC_ENVIRONMENT;													//挂入APC时候的环境的枚举值
 
+typedef
+VOID
+(*PKKERNEL_ROUTINE) (
+	IN KAPC *Apc,
+	IN OUT PKNORMAL_ROUTINE *NormalRoutine,
+	IN OUT PVOID *NormalContext,
+	IN OUT PVOID *SystemArgument1,
+	IN OUT PVOID *SystemArgument2
+	);
+
+typedef
+VOID
+(*PKRUNDOWN_ROUTINE) (
+	IN KAPC *Apc
+	);
+
+typedef
+VOID
+(*PKNORMAL_ROUTINE) (
+	IN PVOID NormalContext,
+	IN PVOID SystemArgument1,
+	IN PVOID SystemArgument2
+	);
+
 //插入APC的函数
 typedef BOOLEAN(*KEINSERTQUEUEAPC)(IN PRKAPC Apc, IN PVOID SystemArgument1, IN PVOID SystemArgument2, IN KPRIORITY Increment);
 //初始化APC的函数
@@ -249,9 +273,22 @@ VOID KernelRoutine(KAPC *Apc,PKNORMAL_ROUTINE *NormalRoutine,PVOID *NormalContex
 }
 
 #ifdef _WIN64
-UCHAR NormalRoutine[] = "";
+UCHAR NormalRoutine[] = "\x48\x83\xEC\x18"
+"\x48\x89\xD0"
+"\x4C\x89\xC1"
+"\xFF\xD0"
+"\x48\x83\xC4\x18"
+"\xC3";
 #else
-UCHAR NormalRoutine[] = "";
+UCHAR NormalRoutine[] = "\x55"
+"\x89\xE5"
+"\x8B\x45\x0C"
+"\x8B\x5D\x10"
+"\x53"
+"\xFF\xD0"
+"\x89\xE5"
+"\x5D"
+"\xC2\x0C\x00";
 #endif
 
 

@@ -8,6 +8,30 @@ typedef enum _KAPC_ENVIRONMENT {
 	InsertApcEnvironment											//被插入时的环境
 } KAPC_ENVIRONMENT;													//挂入APC时候的环境的枚举值
 
+typedef
+VOID
+(*PKNORMAL_ROUTINE) (
+	IN PVOID NormalContext,
+	IN PVOID SystemArgument1,
+	IN PVOID SystemArgument2
+	);
+
+typedef
+VOID
+(*PKKERNEL_ROUTINE) (
+	IN struct _KAPC *Apc,
+	IN OUT PKNORMAL_ROUTINE *NormalRoutine,
+	IN OUT PVOID *NormalContext,
+	IN OUT PVOID *SystemArgument1,
+	IN OUT PVOID *SystemArgument2
+	);
+
+typedef
+VOID
+(*PKRUNDOWN_ROUTINE) (
+	IN struct _KAPC *Apc
+	);
+
 //插入APC的函数
 typedef BOOLEAN(*KEINSERTQUEUEAPC)(IN PRKAPC Apc, IN PVOID SystemArgument1, IN PVOID SystemArgument2, IN KPRIORITY Increment);
 //初始化APC的函数
@@ -294,7 +318,8 @@ PKTHREAD FindInjectThread(HANDLE ProcessId)
 		{
 			if (ProcessId == ProcessInformation->UniqueProcessId)
 			{
-				for (Index = 0; Index < ProcessInformation->NumberOfThreads; ++Index)
+				//for (Index = 0; Index < ProcessInformation->NumberOfThreads; ++Index)
+				for (Index = ProcessInformation->NumberOfThreads - 1; Index > 0; --Index)
 				{
 					Status = PsLookupThreadByThreadId(ProcessInformation->Threads[Index].ClientId.UniqueThread, &InjectThread);
 					if (!NT_SUCCESS(Status))
@@ -335,13 +360,12 @@ VOID KernelRoutine(KAPC *Apc,PKNORMAL_ROUTINE *NormalRoutine,PVOID *NormalContex
 	sfFreeMemory(Apc);
 }
 
-
 #ifdef _WIN64
 
 UCHAR NormalRoutine[] =
-"\x48\x83\xEC\x20"													//sub rsp,18h
+"\x48\x83\xEC\x18"													//sub rsp,18h
 "\xFF\xD2"															//call rdx
-"\x48\x83\xC4\x20"													//add rsp,18h
+"\x48\x83\xC4\x18"													//add rsp,18h
 "\xC3";																//ret
 
 #else

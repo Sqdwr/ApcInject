@@ -264,7 +264,7 @@ ULONG_PTR GeProcAddressFromProcess(HANDLE ProcessId,WCHAR *ModuleName,CHAR *Proc
 	return ProcAddress;
 }
 
-CHAR DllPath[] = "C:\\XXX_64.dll";
+CHAR DllPath[] = "C:\\Win32Project1.dll";
 
 VOID Test()
 {
@@ -273,7 +273,7 @@ VOID Test()
 	KEINITIALIZEAPC KeInitializeApc = NULL;
 	KEINSERTQUEUEAPC KeInsertQueueApc = NULL;
 
-	HANDLE ProcessId = (HANDLE)3896;
+	HANDLE ProcessId = (HANDLE)2188;
 
 	PKAPC Apc = NULL;
 	HANDLE ProcessHandle = NULL;
@@ -367,7 +367,6 @@ VOID Test()
 		RtlCopyMemory(PathBuffer, DllPath, sizeof(DllPath));
 		RtlCopyMemory(ShellCode, NormalRoutine, sizeof(NormalRoutine));
 
-		__debugbreak();
 		//KeInitializeApc(Apc, InjectThread, OriginalApcEnvironment, KernelRoutine, NULL, ShellCode, UserMode, NULL);
 		//KeInsertQueueApc(Apc, (PVOID)LoadLibraryA, PathBuffer, IO_NO_INCREMENT);
 

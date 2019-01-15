@@ -1,15 +1,6 @@
 #include "DefineStruct.h"
 #include "APC.h"
 
-PVOID GetProcAddress(WCHAR *wProcName)
-{
-	UNICODE_STRING uProcName = { 0 };
-
-	RtlInitUnicodeString(&uProcName, wProcName);
-
-	return MmGetSystemRoutineAddress(&uProcName);
-}
-
 HANDLE OpenProcess(HANDLE ProcessId)
 {
 	HANDLE ProcessHandle = NULL;
@@ -282,7 +273,7 @@ VOID Test()
 	KEINITIALIZEAPC KeInitializeApc = NULL;
 	KEINSERTQUEUEAPC KeInsertQueueApc = NULL;
 
-	HANDLE ProcessId = NULL;
+	HANDLE ProcessId = (HANDLE)3896;
 
 	PKAPC Apc = NULL;
 	HANDLE ProcessHandle = NULL;
@@ -336,6 +327,7 @@ VOID Test()
 			KdPrint(("∑÷≈‰Apc∂‘œÛ ß∞‹£°\n"));
 			break;
 		}
+		RtlZeroMemory(Apc, sizeof(KAPC));
 
 		ProcessHandle = OpenProcess(ProcessId);
 		if (ProcessHandle == NULL)
@@ -375,11 +367,14 @@ VOID Test()
 		RtlCopyMemory(PathBuffer, DllPath, sizeof(DllPath));
 		RtlCopyMemory(ShellCode, NormalRoutine, sizeof(NormalRoutine));
 
-		KeInitializeApc(Apc, InjectThread, OriginalApcEnvironment, KernelRoutine, NULL, ShellCode, UserMode, NULL);
-		KeInsertQueueApc(Apc, LoadLibraryA, DllPath, IO_NO_INCREMENT);
-
+		__debugbreak();
+		//KeInitializeApc(Apc, InjectThread, OriginalApcEnvironment, KernelRoutine, NULL, ShellCode, UserMode, NULL);
+		//KeInsertQueueApc(Apc, (PVOID)LoadLibraryA, PathBuffer, IO_NO_INCREMENT);
 
 		KeUnstackDetachProcess(&ApcState);
+
+		KeInitializeApc(Apc, InjectThread, OriginalApcEnvironment, KernelRoutine, NULL, ShellCode, UserMode, PathBuffer);
+		KeInsertQueueApc(Apc, (PVOID)LoadLibraryA, NULL, IO_NO_INCREMENT);
 
 	} while (FALSE);
 

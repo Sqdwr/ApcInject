@@ -148,4 +148,13 @@ typedef struct _SYSTEM_PROCESS_INFORMATION
 } SYSTEM_PROCESS_INFORMATION, *PSYSTEM_PROCESS_INFORMATION;
 //--------------------------SYSTEM_PROCESS_INFORMATION--------------------------
 
+PVOID GetProcAddress(WCHAR *wProcName)
+{
+	UNICODE_STRING uProcName = { 0 };
+
+	RtlInitUnicodeString(&uProcName, wProcName);
+
+	return MmGetSystemRoutineAddress(&uProcName);
+}
+
 #endif

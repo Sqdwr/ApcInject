@@ -273,7 +273,7 @@ VOID Test()
 	KEINITIALIZEAPC KeInitializeApc = NULL;
 	KEINSERTQUEUEAPC KeInsertQueueApc = NULL;
 
-	HANDLE ProcessId = (HANDLE)2188;
+	HANDLE ProcessId = (HANDLE)1864;
 
 	PKAPC Apc = NULL;
 	HANDLE ProcessHandle = NULL;
@@ -290,6 +290,8 @@ VOID Test()
 
 	do
 	{
+		__debugbreak();
+
 		KeInitializeApc = GetProcAddress(L"KeInitializeApc");
 		if (KeInitializeApc == NULL)
 		{

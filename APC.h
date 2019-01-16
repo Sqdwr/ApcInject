@@ -369,15 +369,16 @@ UCHAR NormalRoutine[] =
 "\xC3";																//ret
 
 #else
-UCHAR NormalRoutine[] = "\x55"
-"\x89\xE5"
-"\x8B\x45\x0C"
-"\x8B\x5D\x10"
-"\x53"
-"\xFF\xD0"
-"\x89\xE5"
-"\x5D"
-"\xC2\x0C\x00";
+UCHAR NormalRoutine[] = 
+"\x55"																//push ebp
+"\x89\xE5"															//mov ebp,esp
+"\x8B\x5D\x08"														//mov ebx,dword ptr[ebp + 8h]
+"\x8B\x45\x0C"														//mov eax,dword ptr[ebp+ Ch]
+"\x53"																//push ebx
+"\xFF\xD0"															//call eax
+"\x89\xEC"															//mov esp,ebp
+"\x5D"																//pop ebp
+"\xC2\x0C\x00";														//ret Ch
 #endif
 
 

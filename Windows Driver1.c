@@ -263,17 +263,18 @@ ULONG_PTR GeProcAddressFromProcess(HANDLE ProcessId,WCHAR *ModuleName,CHAR *Proc
 
 	return ProcAddress;
 }
+#ifdef _WIN64
+CHAR DllPath[] = "C:\\XXX_64.dll";
+#else
+CHAR DllPath[] = "C:\\XXX_32.dll";
+#endif
 
-CHAR DllPath[] = "C:\\Win32Project1.dll";
-
-VOID Test()
+VOID Test(HANDLE ProcessId)
 {
 	ULONG_PTR LoadLibraryA = 0;
 
 	KEINITIALIZEAPC KeInitializeApc = NULL;
 	KEINSERTQUEUEAPC KeInsertQueueApc = NULL;
-
-	HANDLE ProcessId = (HANDLE)1864;
 
 	PKAPC Apc = NULL;
 	HANDLE ProcessHandle = NULL;
@@ -290,8 +291,6 @@ VOID Test()
 
 	do
 	{
-		__debugbreak();
-
 		KeInitializeApc = GetProcAddress(L"KeInitializeApc");
 		if (KeInitializeApc == NULL)
 		{
@@ -383,6 +382,76 @@ VOID Test()
 	if (InjectProcess)ObDereferenceObject(InjectProcess);
 }
 
+VOID TestX()
+{
+	ZWQUERYSYSTEMINFORMATION ZwQuerySystemInformation = NULL;
+	PSYSTEM_PROCESS_INFORMATION ProcessInformation = NULL;
+	PVOID Buffer = NULL;
+
+	ULONG RetLength = 0;
+
+	BOOLEAN RetValue = FALSE;
+	NTSTATUS Status = STATUS_SUCCESS;
+
+	do
+	{
+		ZwQuerySystemInformation = (ZWQUERYSYSTEMINFORMATION)GetProcAddress(L"ZwQuerySystemInformation");
+		if (ZwQuerySystemInformation == NULL)
+		{
+			KdPrint(("获取ZwQuerySystemInformation失败！\n"));
+			break;
+		}
+
+		Status = ZwQuerySystemInformation(SystemProcessInformation, Buffer, RetLength, &RetLength);
+		if (Status != STATUS_INFO_LENGTH_MISMATCH)
+		{
+			KdPrint(("获取进程信息失败！错误码是：%x\n", Status));
+			break;
+		}
+
+		Buffer = sfAllocateMemory(RetLength);
+		if (Buffer == NULL)
+		{
+			KdPrint(("分配内存失败！\n"));
+			break;
+		}
+		RtlZeroMemory(Buffer, RetLength);
+		
+		Status = ZwQuerySystemInformation(SystemProcessInformation, Buffer, RetLength, &RetLength);
+		if (!NT_SUCCESS(Status))
+		{
+			KdPrint(("获取进程信息失败！错误码是：%x\n", Status));
+			break;
+		}
+
+		ProcessInformation = Buffer;
+		while (TRUE)
+		{
+			KdPrint(("PID：%d，ImageName：%wZ，NumberOfThreads：%d\n", ProcessInformation->UniqueProcessId, &ProcessInformation->ImageName, ProcessInformation->NumberOfThreads));
+			
+			if (ProcessInformation->ImageName.Buffer && wcsstr(ProcessInformation->ImageName.Buffer, L"explorer"))
+			{
+				KdPrint(("Explorer PID : %d\n", ProcessInformation->UniqueProcessId));
+				Test(ProcessInformation->UniqueProcessId);
+				break;
+			}
+			
+			if (ProcessInformation->NextEntryOffset == 0)
+				break;
+
+
+			ProcessInformation = (PSYSTEM_PROCESS_INFORMATION)((ULONG_PTR)(ProcessInformation)+ProcessInformation->NextEntryOffset);
+		}
+
+		RetValue = TRUE;
+
+	} while (FALSE);
+
+	sfFreeMemory(Buffer);
+
+	return;
+}
+
 VOID Unload(PDRIVER_OBJECT DriverObject)
 {
 	KdPrint(("Unload Success!\n"));
@@ -391,7 +460,7 @@ VOID Unload(PDRIVER_OBJECT DriverObject)
 NTSTATUS DriverEntry(PDRIVER_OBJECT DriverObject, PUNICODE_STRING RegString)
 {
 	KdPrint(("Entry Driver!\n"));
-	Test();
+	TestX();
 	DriverObject->DriverUnload = Unload;
 	return STATUS_SUCCESS;
 }

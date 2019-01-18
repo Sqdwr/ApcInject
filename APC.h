@@ -64,7 +64,8 @@ BOOLEAN TestInjectApc(PKTHREAD Kthread)
 			break;
 		}
 
-		if (OsVersion.wProductType != VER_NT_WORKSTATION)
+		//XP系统不使用该字段
+		if (OsVersion.wProductType != VER_NT_WORKSTATION && OsVersion.dwMajorVersion != 5)
 		{
 			KdPrint(("不支持服务器类型系统！\n"));
 			break;
@@ -246,6 +247,14 @@ BOOLEAN TestInjectApc(PKTHREAD Kthread)
 				Alertable_Offset = 0x3C;
 				Alertable_Bit = 1 << 5;
 			}
+			else if (OsVersion.dwMajorVersion == 5 && OsVersion.dwMinorVersion == 1)
+			{
+				ApcQueueable_Offset = 0x166;
+				ApcQueueable_Bit = 1;
+
+				Alertable_Offset = 0x164;
+				Alertable_Bit = 1;
+			}
 			else
 				break;
 		}
@@ -313,11 +322,13 @@ PKTHREAD FindInjectThread(HANDLE ProcessId)
 			KdPrint(("获取进程信息失败！错误码是：%x\n", Status));
 			break;
 		}
-
+		
 		while (TRUE)
 		{
 			if (ProcessId == ProcessInformation->UniqueProcessId)
 			{
+				//就没搞懂为什么注入就崩掉了，成功的线程Kthrea->State是5，崩溃的也是5
+				//WaitMode都是UserMode
 				//for (Index = 0; Index < ProcessInformation->NumberOfThreads; ++Index)
 				for (Index = ProcessInformation->NumberOfThreads - 1; Index > 0; --Index)
 				{
